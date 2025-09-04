@@ -25,27 +25,38 @@ const app_db = initializeApp(firebaseConfig);
 const db = getDatabase(app_db);
 
 // Health check
-app.get("/", async (req, res) => {
-  try {
-    const snapshot = await get(ref(db, "sensor_data"));
-    if (!snapshot.exists()) {
-      return res.status(404).json({ error: "No data found" });
+app.get("/", (req, res) => {
+  res.render("index.ejs");
+})
+app.get("/live-data", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // avoid nginx buffering
+  res.flushHeaders?.(); // ensure headers sent immediately
+
+  const sensorRef = ref(db, "sensor_data");
+
+  const unsubscribe = onValue(sensorRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      const latestPerSensor = {};
+
+      Object.entries(data).forEach(([sensorId, readings]) => {
+        const keys = Object.keys(readings);
+        const latestKey = keys.sort().pop();
+        latestPerSensor[sensorId] = readings[latestKey];
+      });
+
+      res.write(`data: ${JSON.stringify(latestPerSensor)}\n\n`);
+      res.flush?.(); // force flush if available
     }
+  });
 
-    const data = snapshot.val();
-    const latestPerSensor = {};
-
-    Object.entries(data).forEach(([sensorId, readings]) => {
-      const keys = Object.keys(readings);
-      const latestKey = keys.sort().pop(); // last key
-      latestPerSensor[sensorId] = readings[latestKey];
-    });
-
-    res.render("index.ejs", { sensors: latestPerSensor });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch latest data" });
-  }
+  req.on("close", () => {
+    unsubscribe();
+    res.end();
+  });
 });
 
 app.listen(port, () => {

@@ -1,17 +1,42 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Zeppelin CO Monitoring</title>
-  </head>
-  <body>
-    <h1>Latest Sensor Data</h1>
-    <ul>
-      <% for (let id in sensors) { %>
-        <li>
-          <h3><%= id %></h3>
-          <pre><%= JSON.stringify(sensors[id], null, 2) %></pre>
-        </li>
-      <% } %>
-    </ul>
-  </body>
+<head>
+  <title>Live Sensor Data</title>
+</head>
+<body>
+  <h1>Live Data</h1>
+  <pre id="output"></pre>
+
+  <script>
+    // Listen to the SSE endpoint
+    const eventSource = new EventSource("/live-data");
+
+    eventSource.onmessage = (event) => {
+      // Parse the stringified JSON sent by server
+      const data = JSON.parse(event.data);
+
+      // Display raw pretty JSON
+      document.getElementById("output").textContent =
+        JSON.stringify(data, null, 2);
+
+      // Optional: dynamically update a table or list
+      // Example: create a table if you want structured view
+      /*
+      const table = document.getElementById("sensorTable");
+      table.innerHTML = "";
+      Object.entries(data).forEach(([sensorId, reading]) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${sensorId}</td><td>${reading.value}</td>`;
+        table.appendChild(row);
+      });
+      */
+    };
+
+    // Handle SSE errors
+    eventSource.onerror = (err) => {
+      console.error("SSE error:", err);
+      eventSource.close(); // optional: close connection on error
+    };
+  </script>
+</body>
 </html>
