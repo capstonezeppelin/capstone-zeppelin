@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Zeppelin CO Monitoring</title>
+  </head>
+  <body>
+    <h1>Latest Sensor Data</h1>
+    <ul>
+      <% for (let id in sensors) { %>
+        <li>
+          <h3><%= id %></h3>
+          <pre><%= JSON.stringify(sensors[id], null, 2) %></pre>
+        </li>
+      <% } %>
+    </ul>
+  </body>
+</html>
