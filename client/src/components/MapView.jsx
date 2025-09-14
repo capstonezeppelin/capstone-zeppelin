@@ -29,9 +29,10 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
 
   // Default locations for sensors without GPS (you can update these with actual coordinates)
   const defaultSensorLocations = {
-    'sender1': { lat: -7.7725, lon: 110.3740 },
-    'sender2': { lat: -7.7690, lon: 110.3755 },
-    'sender9': { lat: -7.7780, lon: 110.3760 }
+    'sender1': { lat: -7.764729, lon: 110.376655 },
+    'sender2': { lat: -7.765948, lon: 110.373671},
+    'sender4': { lat: -7.767512, lon: 110.378690},
+    'sender9': { lat: -7.771038, lon: 110.378416}
     // Add more as you deploy new sensors with known locations
   }
 
@@ -45,12 +46,26 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
       lon: defaultSensorLocations[id]?.lon || 110.3760
     }))
 
+  // Dev-only: log which coordinates are used for stationary sensors
+  useEffect(() => {
+    if (import.meta?.env?.MODE === 'development') {
+      try {
+        // eslint-disable-next-line no-console
+        console.table(stationarySensors.map(s => ({ id: s.id, lat: s.lat, lon: s.lon })))
+      } catch {}
+    }
+  }, [stationarySensors])
+
+  // Find all mobile sensors (any sensor with GPS coordinates)
+  const mobileSensors = Object.entries(sensorData || {}).filter(([id, data]) => 
+    data && data.lat && data.lon // Has data and GPS coordinates
+  )
+
   // Define interpolation points
   const interpolationPoints = [
-    { id: 'interp1', name: 'Campus Gate Area', lat: -7.7715, lon: 110.3760 },
-    { id: 'interp2', name: 'Main Road Junction', lat: -7.7740, lon: 110.3775 },
-    { id: 'interp3', name: 'Parking Area', lat: -7.7760, lon: 110.3740 },
-    { id: 'interp4', name: 'Garden Area', lat: -7.7730, lon: 110.3780 }
+    { id: 'interp1', name: 'FKG', lat: -7.771218373125406, lon: 110.37481815566971 },
+    { id: 'interp2', name: 'FISIPOL', lat: -7.7693064837342165, lon: 110.38019968413481 },
+    { id: 'interp3', name: 'F11', lat: -7.77325438032399, lon: 110.37778592390757 }
   ]
 
   const getCOColorClass = (coLevel) => {
@@ -80,7 +95,8 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
     const mobileIcon = isMobile ? '📱' : ''
     
     return L.divIcon({
-      className: 'custom-co-marker',
+      // Include Leaflet default div icon class
+      className: 'custom-co-marker leaflet-div-icon',
       html: `
         <div style="
           background: white;
@@ -95,6 +111,7 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
           font-size: 0.8rem;
           box-shadow: 0 2px 8px rgba(0,0,0,0.3);
           color: #333;
+          pointer-events: auto;
         ">
           ${mobileIcon}${Math.round(coLevel)}
         </div>
@@ -177,11 +194,6 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
     onToggleHeatmap?.(newState)
   }
 
-  // Find all mobile sensors (any sensor with GPS coordinates)
-  const mobileSensors = Object.entries(sensorData || {}).filter(([id, data]) => 
-    data && data.lat && data.lon // Has data and GPS coordinates
-  )
-
   return (
     <div className="map-container">
       <MapContainer
@@ -216,6 +228,11 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
               key={sensor.id}
               position={[sensor.lat, sensor.lon]}
               icon={createCustomIcon(coLevel)}
+              eventHandlers={{
+                click: (e) => e.target.openPopup(),
+                mouseover: (e) => e.target.openPopup(),
+                mouseout: (e) => e.target.closePopup()
+              }}
             >
               <Popup>
                 <div style={{ textAlign: 'center', minWidth: '200px' }}>
@@ -261,6 +278,11 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
             key={`mobile-${sensorId}`}
             position={[data.lat, data.lon]}
             icon={createCustomIcon(data.ppm || 0, true)}
+            eventHandlers={{
+              click: (e) => e.target.openPopup(),
+              mouseover: (e) => e.target.openPopup(),
+              mouseout: (e) => e.target.closePopup()
+            }}
           >
             <Popup>
               <div style={{ textAlign: 'center', minWidth: '200px' }}>

@@ -72,9 +72,8 @@ app.get("/", (req, res) => {
     // Serve React app in production
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
   } else {
-    // During development, you can choose between React or EJS
-    // For now, let's serve the EJS version for backward compatibility
-    res.render("index.ejs");
+    // In development, redirect to Vite dev server to avoid legacy EJS
+    res.redirect('http://localhost:5173');
   }
 });
 

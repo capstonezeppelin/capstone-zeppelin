@@ -13,9 +13,10 @@ function App() {
 
   // Default locations for interpolation (only for sensors that exist in sensorData)
   const defaultLocations = {
-    'sender1': { lat: -7.7725, lon: 110.3740 },
-    'sender2': { lat: -7.7690, lon: 110.3755 },
-    'sender9': { lat: -7.7780, lon: 110.3760 }
+    'sender1': { lat: -7.764729, lon: 110.376655 },
+    'sender2': { lat: -7.765948, lon: 110.373671},
+    'sender4': { lat: -7.767512, lon: 110.378690},
+    'sender9': { lat: -7.771038, lon: 110.378416}
   }
 
   // Dynamically create sensor list from actual data
@@ -28,10 +29,9 @@ function App() {
     }))
 
   const interpolationPoints = [
-    { id: 'interp1', name: 'Campus Gate Area', lat: -7.7715, lon: 110.3760 },
-    { id: 'interp2', name: 'Main Road Junction', lat: -7.7740, lon: 110.3775 },
-    { id: 'interp3', name: 'Parking Area', lat: -7.7760, lon: 110.3740 },
-    { id: 'interp4', name: 'Garden Area', lat: -7.7730, lon: 110.3780 }
+    { id: 'interp1', name: 'FKG', lat: -7.767316204618731, lon: 110.37464142866394},
+    { id: 'interp2', name: 'Fisipol', lat: -7.7693064837342165, lon: 110.38019968413481 },
+    { id: 'interp3', name: 'Parking Area', lat: -7.77325438032399, lon: 110.37778592390757}
   ]
 
   // Update interpolated values ONLY when sensor data exists in RTDB
