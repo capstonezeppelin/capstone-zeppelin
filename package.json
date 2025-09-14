@@ -1,13 +1,18 @@
 {
   "name": "yogya-aq-backend",
   "version": "1.0.0",
-  "main": "src/server.js",
+  "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "client": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "dev:full": "concurrently \"npm run dev\" \"npm run client\""
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^5.0.2",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
@@ -15,9 +20,17 @@
     "express": "^4.18.2",
     "firebase": "^12.2.1",
     "firebase-admin": "^11.7.0",
-    "socket.io": "^4.7.1"
+    "leaflet": "^1.9.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-leaflet": "^5.0.0",
+    "socket.io": "^4.7.1",
+    "vite": "^7.1.5"
   },
   "devDependencies": {
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "concurrently": "^9.2.1",
     "nodemon": "^2.0.22"
   },
   "repository": {

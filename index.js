@@ -1,9 +1,14 @@
 import express from "express";
 import admin from "firebase-admin";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from 'url';
 import { initializeApp } from "firebase/app";
 import { query, getDatabase, ref, onValue, limitToLast, get} from "firebase/database";
 import dotenv from "dotenv";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -24,10 +29,38 @@ const port = process.env.PORT;
 const app_db = initializeApp(firebaseConfig);
 const db = getDatabase(app_db);
 
-// Health check
+// Serve static files from React build
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction) {
+  // In production, serve the React build
+  app.use(express.static(path.join(__dirname, 'dist')));
+} else {
+  // In development, serve legacy static files for backward compatibility
+  app.use('/static', express.static('public'));
+  app.set('view engine', 'ejs');
+}
+
+// Health check / main route
 app.get("/", (req, res) => {
-  res.render("index.ejs");
-})
+  if (isProduction) {
+    // Serve React app in production
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  } else {
+    // During development, you can choose between React or EJS
+    // For now, let's serve the EJS version for backward compatibility
+    res.render("index.ejs");
+  }
+});
+
+// API route prefix for clarity
+app.get("/api/status", (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    mode: isProduction ? 'production' : 'development'
+  });
+});
 app.get("/live-data", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -35,7 +68,9 @@ app.get("/live-data", (req, res) => {
   res.setHeader("X-Accel-Buffering", "no"); // avoid nginx buffering
   res.flushHeaders?.(); // ensure headers sent immediately
 
-  const sensorRef = ref(db, "sensor_data");
+  // Choose data source: "sensor_data" for real-time, "session_data" for averaged
+  const dataSource = process.env.USE_SESSION_DATA === 'true' ? "session_data" : "sensor_data";
+  const sensorRef = ref(db, dataSource);
 
   const unsubscribe = onValue(sensorRef, (snapshot) => {
     if (snapshot.exists()) {
@@ -59,6 +94,19 @@ app.get("/live-data", (req, res) => {
   });
 });
 
+// Catch-all handler for React routing in production
+if (isProduction) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
+}
+
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`🚀 Server running on port ${port}`);
+  console.log(`📊 Mode: ${isProduction ? 'production' : 'development'}`);
+  console.log(`🌐 Access at: http://localhost:${port}`);
+  if (!isProduction) {
+    console.log(`⚡ React dev server: npm run client (port 5173)`);
+    console.log(`🔄 Full development: npm run dev:full`);
+  }
 });

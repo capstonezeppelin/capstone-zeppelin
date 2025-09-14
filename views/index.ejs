@@ -1,42 +1,105 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Live Sensor Data</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UGM CO Monitoring System</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""/>
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-  <h1>Live Data</h1>
-  <pre id="output"></pre>
+  <div class="header">
+    <h1>🏭 UGM CO Monitoring System</h1>
+    <div class="status-indicators">
+      <div class="indicator" id="connection-status">
+        <span class="dot offline"></span>
+        <span class="text">Disconnected</span>
+      </div>
+      <div class="indicator">
+        <span class="dot"></span>
+        <span class="text" id="sensor-count">0/9 Sensors Online</span>
+      </div>
+    </div>
+  </div>
 
-  <script>
-    // Listen to the SSE endpoint
-    const eventSource = new EventSource("/live-data");
+  <div class="main-container">
+    <div class="map-container">
+      <div id="map"></div>
+      
+      <!-- CO Level Legend -->
+      <div class="co-legend">
+        <h3>CO Levels (ppm)</h3>
+        <div class="legend-items">
+          <div class="legend-item">
+            <div class="color-box safe"></div>
+            <span>0-9: Safe</span>
+          </div>
+          <div class="legend-item">
+            <div class="color-box moderate"></div>
+            <span>10-35: Moderate</span>
+          </div>
+          <div class="legend-item">
+            <div class="color-box unhealthy"></div>
+            <span>36-100: Unhealthy</span>
+          </div>
+          <div class="legend-item">
+            <div class="color-box dangerous"></div>
+            <span>100+: Dangerous</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-    eventSource.onmessage = (event) => {
-      // Parse the stringified JSON sent by server
-      const data = JSON.parse(event.data);
+    <div class="sidebar">
+      <div class="sensor-panel">
+        <h2>📍 Stationary Sensors</h2>
+        <div id="stationary-sensors" class="sensor-list">
+          <!-- Sensors will be populated here -->
+        </div>
+      </div>
 
-      // Display raw pretty JSON
-      document.getElementById("output").textContent =
-        JSON.stringify(data, null, 2);
+      <div class="sensor-panel">
+        <h2>🚗 Moving Sensor</h2>
+        <div id="moving-sensor" class="sensor-list">
+          <div class="sensor-item">
+            <span class="sensor-name">Mobile Unit</span>
+            <span class="sensor-value">-- ppm</span>
+            <div class="sensor-location">GPS: Acquiring...</div>
+          </div>
+        </div>
+      </div>
 
-      // Optional: dynamically update a table or list
-      // Example: create a table if you want structured view
-      /*
-      const table = document.getElementById("sensorTable");
-      table.innerHTML = "";
-      Object.entries(data).forEach(([sensorId, reading]) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${sensorId}</td><td>${reading.value}</td>`;
-        table.appendChild(row);
-      });
-      */
-    };
+      <div class="sensor-panel">
+        <h2>🧮 Interpolated Points</h2>
+        <div id="interpolated-points" class="sensor-list">
+          <!-- Interpolated points will be populated here -->
+        </div>
+      </div>
 
-    // Handle SSE errors
-    eventSource.onerror = (err) => {
-      console.error("SSE error:", err);
-      eventSource.close(); // optional: close connection on error
-    };
-  </script>
+      <div class="controls">
+        <button id="toggle-interpolation" class="btn">
+          <span class="btn-text">Show Interpolation</span>
+        </button>
+        <button id="toggle-heatmap" class="btn">
+          <span class="btn-text">Show Heatmap</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""></script>
+  
+  <!-- Custom JavaScript -->
+  <script src="/static/js/kriging.js"></script>
+  <script src="/static/js/app.js"></script>
 </body>
 </html>
