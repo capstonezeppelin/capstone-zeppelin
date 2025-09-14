@@ -24,18 +24,8 @@ class COMonitoringApp {
       west: 110.3700
     };
     
-    // Define 9 stationary sensor locations around UGM campus
-    this.stationarySensors = [
-      { id: 'sensor1', name: 'Faculty of Engineering', lat: -7.7725, lon: 110.3740, value: null },
-      { id: 'sensor2', name: 'Faculty of Medicine', lat: -7.7690, lon: 110.3755, value: null },
-      { id: 'sensor3', name: 'Faculty of Social Sciences', lat: -7.7710, lon: 110.3770, value: null },
-      { id: 'sensor4', name: 'Faculty of Agriculture', lat: -7.7750, lon: 110.3785, value: null },
-      { id: 'sensor5', name: 'Faculty of Economics', lat: -7.7765, lon: 110.3750, value: null },
-      { id: 'sensor6', name: 'Central Library', lat: -7.7745, lon: 110.3765, value: null },
-      { id: 'sensor7', name: 'Rectorate Building', lat: -7.7735, lon: 110.3755, value: null },
-      { id: 'sensor8', name: 'Student Center', lat: -7.7720, lon: 110.3745, value: null },
-      { id: 'sensor9', name: 'Sports Complex', lat: -7.7780, lon: 110.3760, value: null }
-    ];
+  // Dynamic stationary sensor list will be built from incoming data (no hardcoded faculty names)
+  this.stationarySensors = [];
     
     // Define interpolation points (gaps to fill)
     this.interpolationPoints = [
@@ -51,7 +41,7 @@ class COMonitoringApp {
   async init() {
     this.initMap();
     this.setupEventListeners();
-    this.addStationarySensors();
+  // No initial hardcoded sensors; markers created as data arrives
     this.addInterpolationPoints();
     this.connectToDataStream();
     this.startDataSimulation(); // For testing when no real data
@@ -85,12 +75,23 @@ class COMonitoringApp {
     });
   }
 
-  addStationarySensors() {
-    this.stationarySensors.forEach(sensor => {
-      const marker = this.createSensorMarker(sensor, 'stationary');
-      this.sensorMarkers.set(sensor.id, marker);
-      this.updateSensorUI(sensor, 'stationary');
-    });
+  addStationarySensorIfNeeded(sensorId) {
+    let existing = this.stationarySensors.find(s => s.id === sensorId);
+    if (!existing) {
+      // Provide a rough layout for first few sensors (optional); else center fallback
+      const fallbackLocations = {
+        sender1: { lat: -7.7725, lon: 110.3740 },
+        sender2: { lat: -7.7690, lon: 110.3755 },
+        sender9: { lat: -7.7780, lon: 110.3760 }
+      };
+      const loc = fallbackLocations[sensorId] || { lat: -7.7750, lon: 110.3760 };
+      existing = { id: sensorId, name: sensorId, lat: loc.lat, lon: loc.lon, value: null };
+      this.stationarySensors.push(existing);
+      const marker = this.createSensorMarker(existing, 'stationary');
+      this.sensorMarkers.set(sensorId, marker);
+      this.updateSensorUI(existing, 'stationary');
+    }
+    return existing;
   }
 
   createSensorMarker(sensor, type) {
@@ -327,6 +328,7 @@ class COMonitoringApp {
         this.updateMovingSensor(parsedData);
       } else {
         // Stationary sensor
+        this.addStationarySensorIfNeeded(sensorId);
         this.updateSensorMarker(sensorId, parsedData);
       }
     });
@@ -538,35 +540,7 @@ class COMonitoringApp {
   }
 
   // Simulation method for testing (remove when real data is available)
-  startDataSimulation() {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      console.log('Starting data simulation for testing...');
-      
-      setInterval(() => {
-        // Simulate stationary sensor data
-        const simulatedData = {};
-        
-        this.stationarySensors.forEach((sensor, index) => {
-          simulatedData[sensor.id] = {
-            ppm: 5 + Math.random() * 50 + Math.sin(Date.now() / 30000 + index) * 10,
-            timestamp: Date.now()
-          };
-        });
-        
-        // Simulate moving sensor
-        if (Math.random() > 0.3) {
-          simulatedData['mobile'] = {
-            ppm: 10 + Math.random() * 30,
-            lat: -7.7750 + (Math.random() - 0.5) * 0.005,
-            lon: 110.3760 + (Math.random() - 0.5) * 0.005,
-            timestamp: Date.now()
-          };
-        }
-        
-        this.processSensorData(simulatedData);
-      }, 3000);
-    }
-  }
+  startDataSimulation() { /* simulation removed for production */ }
 }
 
 // Initialize the application when the page loads

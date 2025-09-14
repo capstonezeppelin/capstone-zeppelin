@@ -12,10 +12,26 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
+// Validate required env vars early for clearer errors
+const requiredEnv = [
+  'FIREBASE_API_KEY',
+  'FIREBASE_AUTH_DOMAIN',
+  'DATABASE_URL',
+  'FIREBASE_PROJECT_ID',
+  'FIREBASE_APP_ID'
+];
+
+const missing = requiredEnv.filter(k => !process.env[k] || process.env[k].trim() === '');
+if (missing.length) {
+  console.error('\n❌ Missing required environment variables:\n  ' + missing.join('\n  '));
+  console.error('\nCreate or edit a .env file based on .env.example.');
+  process.exit(1);
+}
+
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY,
   authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-  databaseURL: process.env.DATABASE_URL, // ✅ goes here
+  databaseURL: process.env.DATABASE_URL?.trim().replace(/\/+$/,'') || undefined, // trim trailing slash
   projectId: process.env.FIREBASE_PROJECT_ID,
   storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
@@ -24,10 +40,19 @@ const firebaseConfig = {
 
 // --- Express Setup ---
 const app = express();
-const port = process.env.PORT;
+// Allow running even if PORT not defined; default to 3000
+const port = process.env.PORT || 3000;
 
 const app_db = initializeApp(firebaseConfig);
 const db = getDatabase(app_db);
+
+// Attempt an initial lightweight read to confirm connectivity (non-blocking)
+import { child } from "firebase/database";
+get(ref(db, '/')).then(snap => {
+  console.log(`✅ Firebase connected. Root has keys: ${Object.keys(snap.val() || {}).slice(0,5).join(', ')}`);
+}).catch(err => {
+  console.warn('⚠️ Firebase initial read failed:', err.message);
+});
 
 // Serve static files from React build
 const isProduction = process.env.NODE_ENV === 'production';
@@ -60,6 +85,28 @@ app.get("/api/status", (req, res) => {
     timestamp: new Date().toISOString(),
     mode: isProduction ? 'production' : 'development'
   });
+});
+// Database health endpoint
+app.get('/api/db/health', async (req, res) => {
+  try {
+    const dataSource = process.env.USE_SESSION_DATA === 'true' ? 'session_data' : 'sensor_data';
+    const sensorSnap = await get(ref(db, dataSource));
+    const exists = sensorSnap.exists();
+    let keys = [];
+    if (exists) {
+      const val = sensorSnap.val();
+      keys = Object.keys(val).slice(0, 10);
+    }
+    res.json({
+      ok: true,
+      databaseURL: process.env.DATABASE_URL,
+      dataSource,
+      exists,
+      sampleKeys: keys
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 app.get("/live-data", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");

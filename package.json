@@ -44,5 +44,8 @@
     "url": "https://github.com/sfh525/capstone-zeppelin/issues"
   },
   "homepage": "https://github.com/sfh525/capstone-zeppelin#readme",
-  "description": ""
+  "description": "",
+  "engines": {
+    "node": ">=20.19.0 <21 || >=22.12.0"
+  }
 }

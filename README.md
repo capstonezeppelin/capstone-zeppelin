@@ -115,6 +115,18 @@ npm run build
 NODE_ENV=production npm start
 ```
 
+### Optional Sensor Data Simulation
+
+The React client can generate placeholder sensor data if real readings aren't flowing yet. Disabled by default.
+
+Enable it (development only):
+1. Copy `client/.env.example` to `client/.env`
+2. Set `VITE_ENABLE_SIMULATION=true`
+3. Restart `npm run client`
+
+Simulation waits 5 seconds to allow real data; if real data arrives later it stops.
+```
+
 ### Development Workflow
 
 1. **Full Stack Development**: 

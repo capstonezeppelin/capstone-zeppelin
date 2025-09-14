@@ -104,51 +104,39 @@ export const useSensorData = () => {
     }
   }, [])
 
-  // Simulate data for testing in development (REMOVE IN PRODUCTION)
+  // Optional simulation (controlled by Vite env variable VITE_ENABLE_SIMULATION=true)
   useEffect(() => {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      const simulateData = () => {
-        const simulatedData = {}
-        
-        // Simulate your actual sensors (sender1, sender2, sender9)
-        const senderIds = ['sender1', 'sender2', 'sender9']
-        senderIds.forEach((senderId, index) => {
-          simulatedData[senderId] = {
-            ppm: 5 + Math.random() * 50 + Math.sin(Date.now() / 30000 + index) * 10,
-            lastUpdate: new Date(),
-            isOnline: Math.random() > 0.1, // 90% chance of being online
-            lat: null,
-            lon: null
-          }
+    const enableSim = import.meta?.env?.VITE_ENABLE_SIMULATION === 'true'
+    if (!enableSim) return
+    // Only simulate if no real data arrived after a grace period
+    let interval
+    const startSim = () => {
+      interval = setInterval(() => {
+        setSensorData(prev => {
+          // If real sensors present, stop simulation
+          if (Object.keys(prev).length > 0) return prev
+          const simulatedData = {}
+          const senderIds = ['sender1', 'sender2', 'sender9']
+          senderIds.forEach((senderId, index) => {
+            simulatedData[senderId] = {
+              ppm: 5 + Math.random() * 50 + Math.sin(Date.now() / 30000 + index) * 10,
+              lastUpdate: new Date(),
+              isOnline: true,
+              lat: null,
+              lon: null
+            }
+          })
+          return simulatedData
         })
-
-        // Simulate moving sensor
-        if (Math.random() > 0.3) {
-          simulatedData['mobile'] = {
-            ppm: 10 + Math.random() * 30,
-            lat: -7.7750 + (Math.random() - 0.5) * 0.005,
-            lon: 110.3760 + (Math.random() - 0.5) * 0.005,
-            lastUpdate: new Date(),
-            isOnline: true
-          }
-        }
-
-        // Don't merge with existing data - replace it completely in development
-        setSensorData(simulatedData)
-
-        const onlineCount = Object.values(simulatedData).filter(s => s.isOnline).length
-        setSensorCount({
-          online: onlineCount,
-          total: Object.keys(simulatedData).length
+        setSensorCount(prev => {
+          return { online: Object.keys(sensorData).length, total: Object.keys(sensorData).length }
         })
-      }
-
-      const interval = setInterval(simulateData, 3000)
-      simulateData() // Initial call
-
-      return () => clearInterval(interval)
+      }, 3000)
     }
-  }, [])
+    // Wait 5s for real data first
+    const timeout = setTimeout(startSim, 5000)
+    return () => { clearTimeout(timeout); if (interval) clearInterval(interval) }
+  }, [sensorData])
 
   return {
     sensorData,
