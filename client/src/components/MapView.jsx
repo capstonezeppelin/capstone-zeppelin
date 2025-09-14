@@ -30,10 +30,11 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
   // Default locations for sensors without GPS (you can update these with actual coordinates)
   const defaultSensorLocations = {
     'sender1': { lat: -7.764729, lon: 110.376655 },
-    'sender2': { lat: -7.765948, lon: 110.373671},
-    'sender4': { lat: -7.767512, lon: 110.378690},
-    'sender9': { lat: -7.771038, lon: 110.378416}
+    'sender2': { lat: -7.767512, lon: 110.378690},
+    'sender4': { lat: -7.765948, lon: 110.373671},
+    'sender9': { lat: -7.775635, lon: 110.376152}
     // Add more as you deploy new sensors with known locations
+    // { lat: -7.765948, lon: 110.373671}
   }
 
   // Dynamically create sensor list from actual Firebase data
@@ -63,7 +64,7 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
 
   // Define interpolation points
   const interpolationPoints = [
-    { id: 'interp1', name: 'FKG', lat: -7.771218373125406, lon: 110.37481815566971 },
+    { id: 'interp1', name: 'Bike Station MIPA', lat: -7.767307383797572, lon: 110.37465007202256},
     { id: 'interp2', name: 'FISIPOL', lat: -7.7693064837342165, lon: 110.38019968413481 },
     { id: 'interp3', name: 'F11', lat: -7.77325438032399, lon: 110.37778592390757 }
   ]

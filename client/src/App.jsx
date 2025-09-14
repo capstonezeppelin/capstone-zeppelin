@@ -12,24 +12,25 @@ function App() {
   const [showHeatmap, setShowHeatmap] = useState(false)
 
   // Default locations for interpolation (only for sensors that exist in sensorData)
-  const defaultLocations = {
+  const defaultSensorLocations = {
     'sender1': { lat: -7.764729, lon: 110.376655 },
     'sender2': { lat: -7.765948, lon: 110.373671},
     'sender4': { lat: -7.767512, lon: 110.378690},
-    'sender9': { lat: -7.771038, lon: 110.378416}
+    'sender9': { lat: -7.771038, lon: 110.378416} 
+    // Add more as you deploy new sensors with known locations
+    // { lat: -7.765948, lon: 110.373671}
   }
-
   // Dynamically create sensor list from actual data
   const stationarySensors = Object.entries(sensorData || {})
     .filter(([id, data]) => data && !data.lat && !data.lon) // Has data but no GPS = stationary
     .map(([id, data]) => ({
       id,
-      lat: defaultLocations[id]?.lat || -7.7750,
-      lon: defaultLocations[id]?.lon || 110.3760
+      lat: defaultSensorLocations[id]?.lat || -7.7750,
+      lon: defaultSensorLocations[id]?.lon || 110.3760
     }))
 
   const interpolationPoints = [
-    { id: 'interp1', name: 'FKG', lat: -7.767316204618731, lon: 110.37464142866394},
+    { id: 'interp1', name: 'Bike Station MIPA', lat: -7.767307383797572, lon: 110.37465007202256},
     { id: 'interp2', name: 'Fisipol', lat: -7.7693064837342165, lon: 110.38019968413481 },
     { id: 'interp3', name: 'Parking Area', lat: -7.77325438032399, lon: 110.37778592390757}
   ]
