@@ -8,14 +8,39 @@ export const useSensorData = () => {
 
   const parseSensorData = (rawData) => {
     const parsed = { ppm: 0, lat: null, lon: null, voltage: null, analog: null, timestamp: null }
+    const pickNumeric = (v) => {
+      const n = typeof v === 'number' ? v : parseFloat(v)
+      return Number.isFinite(n) ? n : null
+    }
+    const pickAnyPPM = (obj) => {
+      try {
+        for (const [k, v] of Object.entries(obj || {})) {
+          if (/ppm/i.test(k)) {
+            const n = pickNumeric(v)
+            if (n !== null) return n
+          }
+        }
+      } catch {}
+      return null
+    }
+    
+    // Handle direct numeric value (backend sends raw numbers)
+    if (typeof rawData === 'number') {
+      parsed.ppm = rawData
+      return parsed
+    }
     
     if (typeof rawData === 'object') {
       // Handle your actual Firebase data format
-      parsed.ppm = parseFloat(rawData.ppm) || parseFloat(rawData.last_ppm) || rawData.PPM || rawData.value || 0
-      parsed.lat = rawData.lat || rawData.GPSLat || null
-      parsed.lon = rawData.lon || rawData.GPSLng || null
-      parsed.voltage = parseFloat(rawData.voltage) || parseFloat(rawData.last_voltage) || null
-      parsed.analog = rawData.mq7_analog || rawData.last_mq7_analog || null
+      parsed.ppm = pickNumeric(rawData.ppm) ?? pickNumeric(rawData.last_ppm) ?? pickNumeric(rawData.value) ?? pickAnyPPM(rawData) ?? 0
+      const latRaw = rawData.lat ?? rawData.GPSLat ?? rawData.gpsLat
+      const lonRaw = rawData.lon ?? rawData.GPSLng ?? rawData.gpsLng
+      const latNum = (latRaw === 'NoFix' || latRaw === undefined || latRaw === null) ? null : (typeof latRaw === 'number' ? latRaw : parseFloat(latRaw))
+      const lonNum = (lonRaw === 'NoFix' || lonRaw === undefined || lonRaw === null) ? null : (typeof lonRaw === 'number' ? lonRaw : parseFloat(lonRaw))
+      parsed.lat = Number.isFinite(latNum) ? latNum : null
+      parsed.lon = Number.isFinite(lonNum) ? lonNum : null
+      parsed.voltage = pickNumeric(rawData.voltage) ?? pickNumeric(rawData.last_voltage)
+      parsed.analog = pickNumeric(rawData.mq7_analog) ?? pickNumeric(rawData.last_mq7_analog)
       parsed.timestamp = rawData.unix_timestamp || rawData.session_timestamp || null
     } else if (typeof rawData === 'string') {
       // Handle string format from hardware (fallback)
@@ -59,11 +84,15 @@ export const useSensorData = () => {
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
+        console.log('Raw SSE data received:', data) // DEBUG
         const processedData = {}
         let onlineCount = 0
 
         Object.entries(data).forEach(([sensorId, rawSensorData]) => {
+          const idLower = (sensorId || '').toLowerCase()
+          if (idLower === 'sender9' || idLower === 'sender10') return // ignore sender9 and sender10
           const parsed = parseSensorData(rawSensorData)
+          console.log(`Parsed ${sensorId}:`, { raw: rawSensorData, parsed }) // DEBUG
           processedData[sensorId] = {
             ...parsed,
             lastUpdate: new Date(),
@@ -116,7 +145,7 @@ export const useSensorData = () => {
           // If real sensors present, stop simulation
           if (Object.keys(prev).length > 0) return prev
           const simulatedData = {}
-          const senderIds = ['sender1', 'sender2', 'sender9']
+          const senderIds = ['sender1', 'sender2']
           senderIds.forEach((senderId, index) => {
             simulatedData[senderId] = {
               ppm: 5 + Math.random() * 50 + Math.sin(Date.now() / 30000 + index) * 10,

@@ -3,7 +3,10 @@ import React from 'react'
 const Sidebar = ({ sensorData, interpolatedValues }) => {
   // Completely dynamic - only show sensors that have actual data
   const stationarySensors = Object.entries(sensorData || {})
-    .filter(([id, data]) => data && !data.lat && !data.lon) // Has data but no GPS = stationary
+    .filter(([id, data]) => {
+      const idLower = (id || '').toLowerCase()
+      return data && !data.lat && !data.lon && !idLower.includes('mobile') && idLower !== 'sender9' && idLower !== 'sender10'
+    }) // Has data but no GPS = stationary
     .map(([id, data]) => ({
       id,
       name: id // Use the sender ID as the name (sender1, sender2, etc.)
@@ -12,8 +15,8 @@ const Sidebar = ({ sensorData, interpolatedValues }) => {
   // Define interpolation points
   const interpolationPoints = [
     { id: 'interp1', name: 'Bike Station MIPA' },
-    { id: 'interp2', name: 'Fisipol' },
-    { id: 'interp3', name: 'Parking Area' }
+    { id: 'interp2', name: 'FISIPOL' },
+    { id: 'interp3', name: 'F11' }
   ]
 
   const getCOColorClass = (coLevel) => {
@@ -24,9 +27,11 @@ const Sidebar = ({ sensorData, interpolatedValues }) => {
   }
 
   // Find all mobile sensors (any with GPS)
-  const mobileSensors = Object.entries(sensorData || {}).filter(([id, data]) => 
-    data && data.lat && data.lon
-  )
+  const mobileSensors = Object.entries(sensorData || {}).filter(([id, data]) => {
+    const idLower = (id || '').toLowerCase()
+    if (idLower === 'sender9' || idLower === 'sender10') return false
+    return data && (idLower.includes('mobile') || (data.lat && data.lon))
+  })
 
   const SensorItem = ({ sensor, data, type }) => {
     const coLevel = data?.ppm || 0
@@ -37,7 +42,7 @@ const Sidebar = ({ sensorData, interpolatedValues }) => {
       <div className={`sensor-item ${isOnline ? colorClass : ''}`}>
         <span className="sensor-name">{sensor.name}</span>
         <span className="sensor-value">
-          {isOnline ? `${Math.round(coLevel)} ppm` : '-- ppm'}
+          {isOnline ? `${coLevel.toFixed(1)} ppm` : '-- ppm'}
         </span>
         {type === 'mobile' && data?.lat && (
           <div className="sensor-location">
@@ -107,9 +112,9 @@ const Sidebar = ({ sensorData, interpolatedValues }) => {
               const vR = interpolatedValues.rbf?.[point.id]
               const vN = interpolatedValues.knn?.[point.id]
               const display = [
-                vK !== undefined ? `K: ${Math.round(vK)}` : null,
-                vR !== undefined ? `R: ${Math.round(vR)}` : null,
-                vN !== undefined ? `N: ${Math.round(vN)}` : null
+                vK !== undefined ? `K: ${vK.toFixed(1)}` : null,
+                vR !== undefined ? `R: ${vR.toFixed(1)}` : null,
+                vN !== undefined ? `N: ${vN.toFixed(1)}` : null
               ].filter(Boolean).join(' | ')
 
               const colorBase = vK ?? vR ?? vN

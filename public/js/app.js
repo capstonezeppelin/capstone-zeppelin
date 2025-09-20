@@ -219,7 +219,7 @@ class COMonitoringApp {
       
       const customIcon = L.divIcon({
         className: `co-marker ${colorClass}`,
-        html: `<div style="color: #333;">📱${Math.round(coLevel)}</div>`,
+        html: `<div style="color: #333;">${Math.round(coLevel)}</div>`,
         iconSize: [45, 45],
         iconAnchor: [22, 22]
       });

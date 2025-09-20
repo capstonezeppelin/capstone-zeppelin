@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, LayerGroup, Polyline } from 'react-leaflet'
 import L from 'leaflet'
 import { SimpleKriging } from '../utils/kriging'
@@ -16,6 +16,7 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
   const [interpolatedValues, setInterpolatedValues] = useState({})
   const [mobileSensorTrails, setMobileSensorTrails] = useState({}) // Track mobile sensor paths
   const krigingRef = useRef(new SimpleKriging())
+  const intervalRef = useRef(null)
 
   // UGM Campus bounds
   const ugmBounds = {
@@ -40,7 +41,10 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
   }
   // Dynamically create sensor list from actual Firebase data (only sensors with data, no GPS)
   const stationarySensors = Object.entries(sensorData || {})
-    .filter(([id, data]) => data && !data.lat && !data.lon)
+    .filter(([id, data]) => {
+      const idLower = (id || '').toLowerCase()
+      return data && !data.lat && !data.lon && !idLower.includes('mobile') && idLower !== 'sender9' && idLower !== 'sender10'
+    })
     .map(([id]) => ({
       id,
       name: id,
@@ -59,9 +63,13 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
   }, [stationarySensors])
 
   // Find all mobile sensors (any sensor with GPS coordinates)
-  const mobileSensors = Object.entries(sensorData || {}).filter(([id, data]) => 
-    data && data.lat && data.lon // Has data and GPS coordinates
-  )
+  const mobileSensors = useMemo(() => {
+    return Object.entries(sensorData || {}).filter(([id, data]) => {
+      const latOk = Number.isFinite(data?.lat)
+      const lonOk = Number.isFinite(data?.lon)
+      return latOk && lonOk
+    })
+  }, [sensorData])
 
   // Define interpolation points
   const interpolationPoints = [
@@ -69,6 +77,51 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
     { id: 'interp2', name: 'FISIPOL', lat: -7.7693064837342165, lon: 110.38019968413481 },
     { id: 'interp3', name: 'F11', lat: -7.77325438032399, lon: 110.37778592390757 }
   ]
+
+  // Sensor subsets per interpolation point
+  const interpolationSubsets = {
+    interp1: ['sender1', 'sender4'],
+    interp2: ['sender2', 'sender3', 'sender5', 'sender6'],
+    interp3: ['sender5', 'sender6', 'sender7', 'sender8']
+  }
+
+  const toRadians = (deg) => deg * Math.PI / 180
+  const haversineMeters = (lat1, lon1, lat2, lon2) => {
+    const R = 6371000
+    const dLat = toRadians(lat2 - lat1)
+    const dLon = toRadians(lon2 - lon1)
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) ** 2
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+  }
+
+  const buildKnownPointsForPoint = (point) => {
+    const subsetIds = interpolationSubsets[point.id] || []
+    const subsetPoints = subsetIds
+      .map(id => {
+        const data = sensorData[id]
+        const loc = defaultSensorLocations[id]
+        if (!data || data.ppm === undefined || !loc) return null
+        return { id, lat: loc.lat, lon: loc.lon, value: data.ppm }
+      })
+      .filter(Boolean)
+
+    const distances = subsetPoints.map(p => haversineMeters(point.lat, point.lon, p.lat, p.lon))
+    const maxSubsetDistance = distances.length > 0 ? Math.max(...distances) : 0
+
+    const mobileEntry = Object.entries(sensorData || {}).find(([sid, d]) => 
+      (sid === 'mobile1' || sid.toLowerCase().includes('mobile1')) && d && d.lat && d.lon && d.ppm !== undefined
+    )
+    if (mobileEntry && maxSubsetDistance > 0) {
+      const [sid, d] = mobileEntry
+      const mobileDistance = haversineMeters(point.lat, point.lon, d.lat, d.lon)
+      if (mobileDistance <= maxSubsetDistance) {
+        subsetPoints.push({ id: sid, lat: d.lat, lon: d.lon, value: d.ppm })
+      }
+    }
+
+    return subsetPoints.map(p => ({ lat: p.lat, lon: p.lon, value: p.value }))
+  }
 
   const getCOColorClass = (coLevel) => {
     if (coLevel <= 9) return 'safe'
@@ -94,7 +147,7 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
   // Create custom marker icon
   const createCustomIcon = (coLevel, isMobile = false) => {
     const colorClass = getCOColorClass(coLevel)
-    const mobileIcon = isMobile ? '📱' : ''
+    const mobileIcon = isMobile ? '' : ''
     
     return L.divIcon({
       // Include Leaflet default div icon class
@@ -115,7 +168,7 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
           color: #333;
           pointer-events: auto;
         ">
-          ${mobileIcon}${Math.round(coLevel)}
+          ${mobileIcon}${coLevel.toFixed(1)}
         </div>
       `,
       iconSize: [isMobile ? 45 : 40, isMobile ? 45 : 40],
@@ -123,36 +176,25 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
     })
   }
 
-  // Update interpolated points and mobile sensor trails when sensor data changes
+  // Update interpolated points (every 5s) and mobile sensor trails when sensor data changes
   useEffect(() => {
-    const knownPoints = stationarySensors
-      .map(sensor => {
-        const data = sensorData[sensor.id]
-        return data && data.ppm !== undefined ? {
-          lat: sensor.lat,
-          lon: sensor.lon,
-          value: data.ppm
-        } : null
-      })
-      .filter(point => point !== null)
-
-    if (knownPoints.length >= 2) {
-      krigingRef.current.autoAdjustParameters(knownPoints)
-      
+    const computeInterpolations = () => {
       const newInterpolatedValues = {}
       interpolationPoints.forEach(point => {
-        const value = krigingRef.current.interpolate(
-          point.lat, point.lon, knownPoints
-        )
-        if (value !== null) {
-          newInterpolatedValues[point.id] = value
+        const knownPoints = buildKnownPointsForPoint(point)
+        if (knownPoints.length >= 2) {
+          krigingRef.current.autoAdjustParameters(knownPoints)
+          const value = krigingRef.current.interpolate(point.lat, point.lon, knownPoints)
+          if (value !== null) newInterpolatedValues[point.id] = value
         }
       })
-      
       setInterpolatedValues(newInterpolatedValues)
-
-      // Heatmap removed
     }
+
+    // Run immediately and then every 2 seconds
+    computeInterpolations()
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    intervalRef.current = setInterval(computeInterpolations, 2000)
 
     // Update mobile sensor trails
     const newTrails = { ...mobileSensorTrails }
@@ -176,7 +218,11 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
     })
     
     setMobileSensorTrails(newTrails)
-  }, [sensorData, mobileSensors])
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [sensorData])
 
   const handleToggleInterpolation = () => {
     const newState = !showInterpolation
@@ -233,7 +279,7 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
                     fontWeight: 'bold', 
                     color: getCOColor(coLevel) 
                   }}>
-                    {Math.round(coLevel)} ppm
+                    {coLevel.toFixed(1)} ppm
                   </div>
                   <div style={{ fontSize: '14px', color: '#666', margin: '5px 0' }}>
                     Status: {getCOStatus(coLevel)}
@@ -278,14 +324,14 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
             <Popup>
               <div style={{ textAlign: 'center', minWidth: '200px' }}>
                 <h3 style={{ marginBottom: '10px', color: '#333' }}>
-                  📱 {sensorId}
+                  {sensorId}
                 </h3>
                 <div style={{ 
                   fontSize: '24px', 
                   fontWeight: 'bold', 
                   color: getCOColor(data.ppm || 0) 
                 }}>
-                  {Math.round(data.ppm || 0)} ppm
+                  {(data.ppm || 0).toFixed(1)} ppm
                 </div>
                 <div style={{ fontSize: '14px', color: '#666', margin: '5px 0' }}>
                   Status: {getCOStatus(data.ppm || 0)}
@@ -331,7 +377,7 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
                         fontWeight: 'bold',
                         fontSize: '18px'
                       }}>
-                        {Math.round(value)} ppm
+                        {value.toFixed(1)} ppm
                       </div>
                       <div style={{ fontSize: '12px', color: '#666' }}>
                         {getCOStatus(value)}

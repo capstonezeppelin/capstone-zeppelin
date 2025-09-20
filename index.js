@@ -124,9 +124,42 @@ app.get("/live-data", (req, res) => {
       const latestPerSensor = {};
 
       Object.entries(data).forEach(([sensorId, readings]) => {
-        const keys = Object.keys(readings);
-        const latestKey = keys.sort().pop();
-        latestPerSensor[sensorId] = readings[latestKey];
+        try {
+          const idLower = (sensorId || '').toLowerCase()
+          if (idLower === 'sender9' || idLower === 'sender10') return
+
+          if (readings == null) return
+
+          // Case 1: readings is already a flat object like { ppm, voltage, gpsLat, gpsLng }
+          if (typeof readings === 'object' && !Array.isArray(readings)) {
+            const keys = Object.keys(readings)
+            // Heuristic: if any key looks like 'ppm' (case-insensitive), treat as flat schema
+            const hasPPMField = keys.some(k => /ppm/i.test(k))
+            const allKeysNumeric = keys.every(k => /^\d+$/.test(k))
+
+            if (hasPPMField && !allKeysNumeric) {
+              latestPerSensor[sensorId] = readings
+              return
+            }
+
+            // Case 2: timestamp-keyed schema { [unixTs]: { ppm, ... }, ... }
+            if (allKeysNumeric) {
+              const latestKey = keys.map(k => Number(k)).sort((a,b) => a - b).pop()
+              latestPerSensor[sensorId] = readings[String(latestKey)]
+              return
+            }
+          }
+
+          // Fallbacks
+          if (typeof readings === 'number') {
+            latestPerSensor[sensorId] = { ppm: readings }
+          } else {
+            latestPerSensor[sensorId] = readings
+          }
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error('Error processing reading for', sensorId, e)
+        }
       });
 
       res.write(`data: ${JSON.stringify(latestPerSensor)}\n\n`);
