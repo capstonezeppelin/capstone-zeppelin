@@ -4,21 +4,28 @@ import MapView from './components/MapView'
 import Sidebar from './components/Sidebar'
 import { useSensorData } from './hooks/useSensorData'
 import { SimpleKriging } from './utils/kriging'
+import { RBFThinPlateSpline } from './utils/rbf_tps'
+import { KNNRegressor } from './utils/knn'
 
 function App() {
   const { sensorData, isConnected, sensorCount } = useSensorData()
   const [interpolatedValues, setInterpolatedValues] = useState({})
+  const [interpolatedValuesRBF, setInterpolatedValuesRBF] = useState({})
+  const [interpolatedValuesKNN, setInterpolatedValuesKNN] = useState({})
   const [showInterpolation, setShowInterpolation] = useState(false)
-  const [showHeatmap, setShowHeatmap] = useState(false)
 
   // Default locations for interpolation (only for sensors that exist in sensorData)
   const defaultSensorLocations = {
-    'sender1': { lat: -7.764729, lon: 110.376655 },
-    'sender2': { lat: -7.765948, lon: 110.373671},
-    'sender4': { lat: -7.767512, lon: 110.378690},
-    'sender9': { lat: -7.771038, lon: 110.378416} 
+    'sender1': { lat: -7.764729, lon: 110.376655},
+    'sender2': { lat: -7.767512, lon: 110.378690},
+    'sender3': { lat: -7.768433, lon: 110.382745},
+    'sender4': { lat: -7.765948, lon: 110.373671},
+    'sender5': { lat: -7.771038, lon: 110.378416},
+    'sender6': { lat: -7.771900, lon: 110.381235},
+    'sender7': { lat: -7.771218, lon: 110.374818},
+    'sender8': { lat: -7.775635, lon: 110.376152}, 
+    // 'sender9': { lat: -7.771038, lon: 110.378416}
     // Add more as you deploy new sensors with known locations
-    // { lat: -7.765948, lon: 110.373671}
   }
   // Dynamically create sensor list from actual data
   const stationarySensors = Object.entries(sensorData || {})
@@ -35,9 +42,11 @@ function App() {
     { id: 'interp3', name: 'Parking Area', lat: -7.77325438032399, lon: 110.37778592390757}
   ]
 
-  // Update interpolated values ONLY when sensor data exists in RTDB
+  // Update interpolated values for all methods when sensor data exists in RTDB
   useEffect(() => {
     const kriging = new SimpleKriging()
+    const rbf = new RBFThinPlateSpline({ lambda: 1e-6 })
+    const knn = new KNNRegressor({ k: 3, power: 1 })
     
     const knownPoints = stationarySensors
       .map(sensor => {
@@ -55,28 +64,29 @@ function App() {
       kriging.autoAdjustParameters(knownPoints)
       
       const newInterpolatedValues = {}
+      const newInterpolatedValuesRBF = {}
+      const newInterpolatedValuesKNN = {}
       interpolationPoints.forEach(point => {
-        const value = kriging.interpolate(
-          point.lat, point.lon, knownPoints
-        )
-        if (value !== null) {
-          newInterpolatedValues[point.id] = value
-        }
+        const vKrig = kriging.interpolate(point.lat, point.lon, knownPoints)
+        const vRBF = rbf.interpolate(point.lat, point.lon, knownPoints)
+        const vKNN = knn.interpolate(point.lat, point.lon, knownPoints)
+        if (vKrig !== null) newInterpolatedValues[point.id] = vKrig
+        if (vRBF !== null) newInterpolatedValuesRBF[point.id] = vRBF
+        if (vKNN !== null) newInterpolatedValuesKNN[point.id] = vKNN
       })
       
       setInterpolatedValues(newInterpolatedValues)
+      setInterpolatedValuesRBF(newInterpolatedValuesRBF)
+      setInterpolatedValuesKNN(newInterpolatedValuesKNN)
     } else {
-      // Clear interpolation if insufficient real data
       setInterpolatedValues({})
+      setInterpolatedValuesRBF({})
+      setInterpolatedValuesKNN({})
     }
   }, [sensorData, stationarySensors])
 
   const handleToggleInterpolation = (show) => {
     setShowInterpolation(show)
-  }
-
-  const handleToggleHeatmap = (show) => {
-    setShowHeatmap(show)
   }
 
   return (
@@ -90,12 +100,11 @@ function App() {
         <MapView
           sensorData={sensorData}
           onToggleInterpolation={handleToggleInterpolation}
-          onToggleHeatmap={handleToggleHeatmap}
         />
         
         <Sidebar
           sensorData={sensorData}
-          interpolatedValues={interpolatedValues}
+          interpolatedValues={{ kriging: interpolatedValues, rbf: interpolatedValuesRBF, knn: interpolatedValuesKNN }}
         />
       </div>
     </div>

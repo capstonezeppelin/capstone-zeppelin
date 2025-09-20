@@ -13,9 +13,7 @@ L.Icon.Default.mergeOptions({
 
 const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
   const [showInterpolation, setShowInterpolation] = useState(false)
-  const [showHeatmap, setShowHeatmap] = useState(false)
   const [interpolatedValues, setInterpolatedValues] = useState({})
-  const [heatmapData, setHeatmapData] = useState([])
   const [mobileSensorTrails, setMobileSensorTrails] = useState({}) // Track mobile sensor paths
   const krigingRef = useRef(new SimpleKriging())
 
@@ -29,21 +27,24 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
 
   // Default locations for sensors without GPS (you can update these with actual coordinates)
   const defaultSensorLocations = {
-    'sender1': { lat: -7.764729, lon: 110.376655 },
+    'sender1': { lat: -7.764729, lon: 110.376655},
     'sender2': { lat: -7.767512, lon: 110.378690},
+    'sender3': { lat: -7.768433, lon: 110.382745},
     'sender4': { lat: -7.765948, lon: 110.373671},
-    'sender9': { lat: -7.775635, lon: 110.376152}
+    'sender5': { lat: -7.771038, lon: 110.378416},
+    'sender6': { lat: -7.771900, lon: 110.381235},
+    'sender7': { lat: -7.771218, lon: 110.374818},
+    'sender8': { lat: -7.775635, lon: 110.376152}, 
+    // 'sender9': { lat: -7.771038, lon: 110.378416}
     // Add more as you deploy new sensors with known locations
-    // { lat: -7.765948, lon: 110.373671}
   }
-
-  // Dynamically create sensor list from actual Firebase data
+  // Dynamically create sensor list from actual Firebase data (only sensors with data, no GPS)
   const stationarySensors = Object.entries(sensorData || {})
-    .filter(([id, data]) => data && !data.lat && !data.lon) // Has data but no GPS = stationary
-    .map(([id, data]) => ({
+    .filter(([id, data]) => data && !data.lat && !data.lon)
+    .map(([id]) => ({
       id,
-      name: id, // Use sender ID as name (sender1, sender2, etc.)
-      lat: defaultSensorLocations[id]?.lat || -7.7750, // Default to campus center if unknown
+      name: id,
+      lat: defaultSensorLocations[id]?.lat || -7.7750,
       lon: defaultSensorLocations[id]?.lon || 110.3760
     }))
 
@@ -150,13 +151,7 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
       
       setInterpolatedValues(newInterpolatedValues)
 
-      // Generate heatmap data
-      if (showHeatmap) {
-        const gridData = krigingRef.current.generateInterpolationGrid(
-          ugmBounds, knownPoints, 15
-        )
-        setHeatmapData(gridData)
-      }
+      // Heatmap removed
     }
 
     // Update mobile sensor trails
@@ -181,7 +176,7 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
     })
     
     setMobileSensorTrails(newTrails)
-  }, [sensorData, showHeatmap, mobileSensors])
+  }, [sensorData, mobileSensors])
 
   const handleToggleInterpolation = () => {
     const newState = !showInterpolation
@@ -189,11 +184,7 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
     onToggleInterpolation?.(newState)
   }
 
-  const handleToggleHeatmap = () => {
-    const newState = !showHeatmap
-    setShowHeatmap(newState)
-    onToggleHeatmap?.(newState)
-  }
+  // Heatmap removed
 
   return (
     <div className="map-container">
@@ -222,7 +213,6 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
         {stationarySensors.map(sensor => {
           const data = sensorData[sensor.id]
           if (!data) return null
-          
           const coLevel = data.ppm || 0
           return (
             <Marker
@@ -354,23 +344,7 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
           </LayerGroup>
         )}
 
-        {/* Heatmap visualization */}
-        {showHeatmap && (
-          <LayerGroup>
-            {heatmapData.map((point, index) => (
-              <CircleMarker
-                key={index}
-                center={[point.lat, point.lon]}
-                radius={50}
-                fillColor={getCOColor(point.value)}
-                color={getCOColor(point.value)}
-                weight={0}
-                opacity={0.6}
-                fillOpacity={0.4}
-              />
-            ))}
-          </LayerGroup>
-        )}
+        {/* Heatmap removed */}
       </MapContainer>
 
       {/* CO Level Legend */}
@@ -413,13 +387,7 @@ const MapView = ({ sensorData, onToggleInterpolation, onToggleHeatmap }) => {
         >
           {showInterpolation ? 'Hide Interpolation' : 'Show Interpolation'}
         </button>
-        <button
-          onClick={handleToggleHeatmap}
-          className={`btn ${showHeatmap ? 'active' : ''}`}
-          style={{ fontSize: '0.8rem', padding: '8px 12px' }}
-        >
-          {showHeatmap ? 'Hide Heatmap' : 'Show Heatmap'}
-        </button>
+        {/* Heatmap control removed */}
       </div>
     </div>
   )

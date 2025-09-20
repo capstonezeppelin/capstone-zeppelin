@@ -11,10 +11,9 @@ const Sidebar = ({ sensorData, interpolatedValues }) => {
 
   // Define interpolation points
   const interpolationPoints = [
-    { id: 'interp1', name: 'Campus Gate Area' },
-    { id: 'interp2', name: 'Main Road Junction' },
-    { id: 'interp3', name: 'Parking Area' },
-    { id: 'interp4', name: 'Garden Area' }
+    { id: 'interp1', name: 'Bike Station MIPA' },
+    { id: 'interp2', name: 'Fisipol' },
+    { id: 'interp3', name: 'Parking Area' }
   ]
 
   const getCOColorClass = (coLevel) => {
@@ -100,32 +99,41 @@ const Sidebar = ({ sensorData, interpolatedValues }) => {
       </div>
 
       <div className="sensor-panel">
-        <h2>🧮 Interpolated Points</h2>
+        <h2>🧮 Interpolated (Kriging / RBF-TPS / KNN)</h2>
         <div className="sensor-list">
-          {Object.keys(interpolatedValues || {}).length > 0 ? (
-            interpolationPoints
-              .filter(point => {
-                const value = interpolatedValues[point.id]
-                return value !== undefined && value !== null
-              })
-              .map(point => {
-                const value = interpolatedValues[point.id]
-                return (
-                  <div
-                    key={point.id}
-                    className={`sensor-item ${getCOColorClass(value)}`}
-                  >
-                    <span className="sensor-name">{point.name}</span>
-                    <span className="sensor-value">{Math.round(value)} ppm</span>
-                    <div className="sensor-timestamp">Interpolated</div>
-                  </div>
-                )
-              })
+          {interpolatedValues && (interpolatedValues.kriging || interpolatedValues.rbf || interpolatedValues.knn) ? (
+            interpolationPoints.map(point => {
+              const vK = interpolatedValues.kriging?.[point.id]
+              const vR = interpolatedValues.rbf?.[point.id]
+              const vN = interpolatedValues.knn?.[point.id]
+              const display = [
+                vK !== undefined ? `K: ${Math.round(vK)}` : null,
+                vR !== undefined ? `R: ${Math.round(vR)}` : null,
+                vN !== undefined ? `N: ${Math.round(vN)}` : null
+              ].filter(Boolean).join(' | ')
+
+              const colorBase = vK ?? vR ?? vN
+              if (colorBase === undefined) return (
+                <div key={point.id} className="sensor-item">
+                  <span className="sensor-name">{point.name}</span>
+                  <span className="sensor-value">--</span>
+                  <div className="sensor-timestamp">Need 2+ sensors</div>
+                </div>
+              )
+
+              return (
+                <div key={point.id} className={`sensor-item ${getCOColorClass(colorBase)}`}>
+                  <span className="sensor-name">{point.name}</span>
+                  <span className="sensor-value">{display} ppm</span>
+                  <div className="sensor-timestamp">Interpolated (K/R/N)</div>
+                </div>
+              )
+            })
           ) : (
             <div className="sensor-item">
               <span className="sensor-name">No Interpolation Available</span>
-              <span className="sensor-value">-- ppm</span>
-              <div className="sensor-timestamp">Need 2+ sensors for interpolation</div>
+              <span className="sensor-value">--</span>
+              <div className="sensor-timestamp">Need 2+ sensors</div>
             </div>
           )}
         </div>
