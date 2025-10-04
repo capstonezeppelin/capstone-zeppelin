@@ -3,3 +3,4 @@ hardware/secrets.h
 node_modules/
 .env
 serviceAccountPath.json
+Mockup/

@@ -17,16 +17,12 @@ function App() {
 
   // Default locations for interpolation (only for sensors that exist in sensorData)
   const defaultSensorLocations = {
-    'sender1': { lat: -7.764729, lon: 110.376655},
+    'sender1': { lat: -7.764729, lon: 110.376655 },
     'sender2': { lat: -7.767512, lon: 110.378690},
-    'sender3': { lat: -7.768433, lon: 110.382745},
     'sender4': { lat: -7.765948, lon: 110.373671},
-    'sender5': { lat: -7.771038, lon: 110.378416},
-    'sender6': { lat: -7.771900, lon: 110.381235},
-    'sender7': { lat: -7.771218, lon: 110.374818},
-    'sender8': { lat: -7.775635, lon: 110.376152}, 
-    // 'sender9': { lat: -7.771038, lon: 110.378416}
+    'sender9': { lat: -7.775635, lon: 110.376152}
     // Add more as you deploy new sensors with known locations
+    // { lat: -7.765948, lon: 110.373671}
   }
   // Dynamically create sensor list from actual data
   const stationarySensors = Object.entries(sensorData || {})
