@@ -1,23 +1,16 @@
 import React from 'react'
 
-const Sidebar = ({ sensorData, interpolatedValues }) => {
+const Sidebar = ({ sensorData, clickedPoint, clickedValue }) => {
   // Completely dynamic - only show sensors that have actual data
   const stationarySensors = Object.entries(sensorData || {})
     .filter(([id, data]) => {
       const idLower = (id || '').toLowerCase()
-      return data && !data.lat && !data.lon && !idLower.includes('mobile') && idLower !== 'sender9' && idLower !== 'sender10'
-    }) // Has data but no GPS = stationary
+      return data && !data.lat && !data.lon && !idLower.includes('mobile')
+    })
     .map(([id, data]) => ({
       id,
-      name: id // Use the sender ID as the name (sender1, sender2, etc.)
+      name: id
     }))
-
-  // Define interpolation points
-  const interpolationPoints = [
-    { id: 'interp1', name: 'Bike Station MIPA' },
-    { id: 'interp2', name: 'FISIPOL' },
-    { id: 'interp3', name: 'F11' }
-  ]
 
   const getCOColorClass = (coLevel) => {
     if (coLevel <= 9) return 'safe'
@@ -28,9 +21,7 @@ const Sidebar = ({ sensorData, interpolatedValues }) => {
 
   // Find all mobile sensors (any with GPS)
   const mobileSensors = Object.entries(sensorData || {}).filter(([id, data]) => {
-    const idLower = (id || '').toLowerCase()
-    if (idLower === 'sender9' || idLower === 'sender10') return false
-    return data && (idLower.includes('mobile') || (data.lat && data.lon))
+    return data && data.lat && data.lon
   })
 
   const SensorItem = ({ sensor, data, type }) => {
@@ -87,7 +78,7 @@ const Sidebar = ({ sensorData, interpolatedValues }) => {
             mobileSensors.map(([sensorId, data]) => (
               <SensorItem
                 key={sensorId}
-                sensor={{ name: sensorId }} // Just use the sender ID (sender1, sender2, etc.)
+                sensor={{ name: sensorId }}
                 data={data}
                 type="mobile"
               />
@@ -104,41 +95,20 @@ const Sidebar = ({ sensorData, interpolatedValues }) => {
       </div>
 
       <div className="sensor-panel">
-        <h2>🧮 Interpolated (Kriging / RBF-TPS / KNN)</h2>
+        <h2>🧮 Interpolated Point</h2>
         <div className="sensor-list">
-          {interpolatedValues && (interpolatedValues.kriging || interpolatedValues.rbf || interpolatedValues.knn) ? (
-            interpolationPoints.map(point => {
-              const vK = interpolatedValues.kriging?.[point.id]
-              const vR = interpolatedValues.rbf?.[point.id]
-              const vN = interpolatedValues.knn?.[point.id]
-              const display = [
-                vK !== undefined ? `K: ${vK.toFixed(1)}` : null,
-                vR !== undefined ? `R: ${vR.toFixed(1)}` : null,
-                vN !== undefined ? `N: ${vN.toFixed(1)}` : null
-              ].filter(Boolean).join(' | ')
-
-              const colorBase = vK ?? vR ?? vN
-              if (colorBase === undefined) return (
-                <div key={point.id} className="sensor-item">
-                  <span className="sensor-name">{point.name}</span>
-                  <span className="sensor-value">--</span>
-                  <div className="sensor-timestamp">Need 2+ sensors</div>
-                </div>
-              )
-
-              return (
-                <div key={point.id} className={`sensor-item ${getCOColorClass(colorBase)}`}>
-                  <span className="sensor-name">{point.name}</span>
-                  <span className="sensor-value">{display} ppm</span>
-                  <div className="sensor-timestamp">Interpolated (K/R/N)</div>
-                </div>
-              )
-            })
+          {clickedPoint && clickedValue !== null ? (
+            <div className={`sensor-item ${getCOColorClass(clickedValue)}`}>
+              <span className="sensor-name">Clicked Point</span>
+              <span className="sensor-value">{clickedValue.toFixed(1)} ppm</span>
+              <div className="sensor-location">GPS: {clickedPoint.lat.toFixed(5)}, {clickedPoint.lon.toFixed(5)}</div>
+              <div className="sensor-timestamp">Interpolated</div>
+            </div>
           ) : (
             <div className="sensor-item">
-              <span className="sensor-name">No Interpolation Available</span>
-              <span className="sensor-value">--</span>
-              <div className="sensor-timestamp">Need 2+ sensors</div>
+              <span className="sensor-name">No point clicked</span>
+              <span className="sensor-value">-- ppm</span>
+              <div className="sensor-timestamp">Click within bounds to interpolate</div>
             </div>
           )}
         </div>
