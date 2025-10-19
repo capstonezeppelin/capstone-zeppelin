@@ -13,7 +13,7 @@ function App() {
   // Default locations for all 8 sensors
   const defaultSensorLocations = {
     'sender1': { lat: -7.766910019089596, lon: 110.3764144247782 },
-    'sender2': { lat: -7.767105485062683, lon: 110.37599551136299 },
+    'sender2': { lat: -7.766858718542408, lon: 110.37700532775817},
     'sender3': { lat: -7.766691086312068, lon: 110.37560958035739},
     'sender4': { lat: -7.767481093269857, lon: 110.37542537150864 },
     'sender5': { lat: -7.767761681590389, lon: 110.37631067373695},
