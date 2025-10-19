@@ -12,14 +12,14 @@ function App() {
 
   // Default locations for all 8 sensors
   const defaultSensorLocations = {
-    'sender1': { lat: -7.764729, lon: 110.376655},
-    'sender2': { lat: -7.767512, lon: 110.378690},
-    'sender3': { lat: -7.768433, lon: 110.382745},
-    'sender4': { lat: -7.765948, lon: 110.373671},
-    'sender5': { lat: -7.771038, lon: 110.378416},
-    'sender6': { lat: -7.771900, lon: 110.381235},
-    'sender7': { lat: -7.771218, lon: 110.374818},
-    'sender8': { lat: -7.775635, lon: 110.376152}
+    'sender1': { lat: -7.766910019089596, lon: 110.3764144247782 },
+    'sender2': { lat: -7.767105485062683, lon: 110.37599551136299 },
+    'sender3': { lat: -7.766691086312068, lon: 110.37560958035739},
+    'sender4': { lat: -7.767481093269857, lon: 110.37542537150864 },
+    'sender5': { lat: -7.767761681590389, lon: 110.37631067373695},
+    'sender6': { lat: -7.768020476477149, lon: 110.37720697350848 },
+    'sender7': { lat: -7.7671405732116146, lon: 110.37791906443125 },
+    'sender8': { lat: -7.76790077435651, lon: 110.37756450256549}
   }
 
   // Bounds defined by corner sensors (sender1, sender3, sender4, sender8)

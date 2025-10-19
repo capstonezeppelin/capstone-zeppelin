@@ -175,8 +175,8 @@ const MapView = ({ sensorData, defaultSensorLocations, bounds, onToggleInterpola
   return (
     <div className="map-container">
       <MapContainer
-        center={[-7.7750, 110.3760]}
-        zoom={16}
+        center={[-7.767299023452005, 110.37659430350615]}
+        zoom={18}
         style={{ height: '100%', width: '100%' }}
         className="map"
       >
@@ -347,25 +347,6 @@ const MapView = ({ sensorData, defaultSensorLocations, bounds, onToggleInterpola
             <span>100+: Dangerous</span>
           </div>
         </div>
-      </div>
-
-      {/* Map Controls */}
-      <div style={{
-        position: 'absolute',
-        top: '20px',
-        right: '20px',
-        zIndex: 1000,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px'
-      }}>
-        <button
-          onClick={handleToggleInterpolation}
-          className={`btn ${showInterpolation ? 'active' : ''}`}
-          style={{ fontSize: '0.8rem', padding: '8px 12px' }}
-        >
-          {showInterpolation ? 'Hide Interpolation' : 'Show Interpolation'}
-        </button>
       </div>
     </div>
   )
